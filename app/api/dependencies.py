@@ -15,8 +15,6 @@ logger = logging.getLogger(__name__)
 #security = HTTPBearer()
 
 def get_current_user(token: str, db: Session = Depends(get_db)):
-    print(f"Received token: {token[:10]}...")  
-    
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -24,27 +22,14 @@ def get_current_user(token: str, db: Session = Depends(get_db)):
     )
     
     try:
-        print("Attempting to decode JWT token")
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
-        print(f"Decoded payload: {payload}")
-        
         user_id: str = payload.get("sub")
         if user_id is None:
-            print("No user_id found in token payload")
             raise credentials_exception
-        
-    except JWTError as e:
-        print(f"JWTError occurred: {str(e)}")
+    except JWTError:
         raise credentials_exception
-    
-    try:
-        user = crud_user.get_user(db, user_id=int(user_id))
-        if user is None:
-            print(f"No user found for user_id: {user_id}")
-            raise credentials_exception
-        print(f"User found: {user.id}")
-        return user
-    except Exception as e:
-        print(f"Error occurred while fetching user: {str(e)}")
+
+    user = crud_user.get_user(db, user_id=int(user_id))
+    if user is None or user.rol_id != 1:  # Verificar rol_id
         raise credentials_exception
-        raise credentials_exception
+    return user

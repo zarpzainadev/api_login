@@ -1,17 +1,18 @@
 from pydantic import BaseModel, EmailStr
 from datetime import date, datetime
-from app.models.user import UserRole, UserStatus
 from typing import Optional
 
+# Esquema base de usuario
 class UserBase(BaseModel):
     dni: str
     email: EmailStr
-    nombre: str
-    apellidos: str
+    nombres: str
+    apellidos_paterno: str
+    apellidos_materno: str
     fecha_nacimiento: date
     celular: str
-    rol: UserRole
-    estado: UserStatus
+    rol_id: int 
+    estado_id: int
     
 
 class UserCreate(UserBase):
@@ -23,15 +24,19 @@ class UserInDB(UserBase):
     fecha_registro: datetime
 
     class Config:
-        from_attributes = True
+        orm_mode = True
 
 class UserLogin(BaseModel):
-    login: str  # Can be either DNI or email
+    login: str  
     password: str
 
 class Token(BaseModel):
     access_token: str
     refresh_token: str
+    token_type: str
+
+class Token_regenerate(BaseModel):
+    access_token: str
     token_type: str
 
 class TokenData(BaseModel):

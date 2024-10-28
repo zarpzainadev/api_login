@@ -5,11 +5,11 @@ from sqlalchemy.orm import Session
 from app.api.dependencies import get_current_user
 from app.api.email import send_email
 from ...crud import crud_user
-from ...schemas.user import PasswordResetConfirm, PasswordResetRequest, RefreshTokenRequest, UserCreate, Token, Session
+from ...schemas.user import PasswordResetConfirm, PasswordResetRequest, RefreshTokenRequest, Token_regenerate, UserCreate, Token, Session
 from ...core.security import create_access_token, create_password_reset_token, get_password_hash, logout_user, verify_password, create_refresh_token, verify_reset_token
 from ...database import get_db
-from ...models.user import UserStatus
-from ...models.user import Session as Sesion
+from ...models.user import EstadoUsuario
+from ...models.user import Sesion
 from datetime import datetime, timedelta
 from ...config import settings
 
@@ -37,8 +37,12 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    print(user.estado)
-    if user.estado not in [UserStatus.Activo, UserStatus.Ensueños]:
+    
+    print(user.estado_id)
+
+    BLOCKED_STATE_IDS = [3]
+
+    if user.estado_id in BLOCKED_STATE_IDS:
         logger.warning(f"Blocked user attempted to login: {user.id}")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -49,7 +53,7 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     refresh_token_expires = timedelta(minutes=settings.REFRESH_TOKEN_EXPIRE_MINUTES)
 
     access_token = create_access_token(
-        data={"sub": str(user.id), "role": str(user.rol)}, expires_delta=access_token_expires
+        data={"sub": str(user.id)}, expires_delta=access_token_expires
     )
     refresh_token = create_refresh_token(
         data={"sub": str(user.id)}, expires_delta=refresh_token_expires
@@ -91,7 +95,7 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
     refresh_token_expires = timedelta(minutes=settings.REFRESH_TOKEN_EXPIRE_MINUTES)
     
     access_token = create_access_token(
-        data={"sub": str(user.id), "role": str(user.rol)}, expires_delta=access_token_expires
+        data={"sub": str(user.id)}, expires_delta=access_token_expires
     )
     
     refresh_token = create_refresh_token(
@@ -106,7 +110,10 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
     }
 
 
-@router.post("/token/refresh", response_model=Token)
+
+
+
+@router.post("/token/refresh", response_model=Token_regenerate)
 def refresh_token(refresh_request: RefreshTokenRequest, db: Session = Depends(get_db)):
     logger.info("Token refresh attempt")
     session = db.query(Sesion).filter(Sesion.token == refresh_request.refresh_token).first()
@@ -115,7 +122,7 @@ def refresh_token(refresh_request: RefreshTokenRequest, db: Session = Depends(ge
         logger.warning("Invalid refresh token attempt")
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
 
-    # Ensure both datetimes are timezone-aware or naive
+   
     current_time = datetime.utcnow().replace(tzinfo=None)
     session_expiration = session.fecha_expiracion.replace(tzinfo=None)
 
@@ -127,13 +134,12 @@ def refresh_token(refresh_request: RefreshTokenRequest, db: Session = Depends(ge
 
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        data={"sub": str(session.usuario_id), "role":session.rol}, expires_delta=access_token_expires  
+        data={"sub": str(session.usuario_id)}, expires_delta=access_token_expires  
     )
 
     logger.info(f"Token refreshed successfully for user: {session.usuario_id}")
     return {
         "access_token": access_token,
-        "refresh_token": session.token,
         "token_type": "bearer"
     }
 
@@ -148,7 +154,7 @@ def forgot_password(request: PasswordResetRequest, db: Session = Depends(get_db)
 
     token = create_password_reset_token(db, user.id)
     
-    # Aquí deberías implementar el envío real del correo electrónico
+    # recordar implementar el link de frontend
     reset_link = f"https://tuaplicacion.com/reset-password?token={token}"
 
     print(token)
@@ -156,7 +162,7 @@ def forgot_password(request: PasswordResetRequest, db: Session = Depends(get_db)
     send_email(
         to_email=user.email,
         subject="Restablecimiento de Contraseña",
-        body=f"aleee nenaa, holaaaa, no hagas click en el enlace aun no esta habilitado: {reset_link}"
+        body=f"haz click n el enlace para reestablecer: {reset_link}"
     )
 
     return {"message": "se envio conexito el correo"}
@@ -178,21 +184,16 @@ def reset_password(request: PasswordResetConfirm, db: Session = Depends(get_db))
 
 @router.post("/logout")
 def logout(
-    token: HTTPAuthorizationCredentials = Depends(security),
-    db: Session = Depends(get_db)
+    refresh_token: str,
+    db: Session = Depends(get_db),
+    token: HTTPBearer = Depends(security)
 ):
-    print(token)
+    
+    current_user = get_current_user(token.credentials, db)
 
-    try:
-        current_user = get_current_user(token.credentials, db)
-        print(current_user)
+    if refresh_token is None:
+        raise HTTPException(status_code=400, detail="Refresh token is required")
+    
+    result = logout_user(refresh_token, db)
 
-        result = logout_user(current_user, db)
-        logger.info(f"User {current_user.id} successfully logged out")
-        return result
-    except HTTPException as he:
-        logger.error(f"Authentication error during logout: {str(he)}")
-        raise
-    except Exception as e:
-        logger.error(f"Error during logout: {str(e)}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"An error occurred during logout: {str(e)}")
+    return result

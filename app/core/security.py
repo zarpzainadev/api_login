@@ -1,5 +1,5 @@
 import secrets
-from fastapi import Depends, HTTPException, logger
+from fastapi import Depends, HTTPException, logger, status
 from fastapi.security import OAuth2PasswordBearer
 from passlib.context import CryptContext
 from datetime import datetime, timedelta
@@ -7,7 +7,7 @@ from jose import JWTError, jwt
 from app import models
 from app.config import settings
 from app.schemas.user import Session
-from app.models.user import Session as Sesion, User
+from app.models.user import Sesion , Usuario
 from sqlalchemy.orm import Session
 
 
@@ -40,17 +40,24 @@ def create_refresh_token(data: dict, expires_delta: timedelta):
 
 
 
-def logout_user(current_user: User, db: Session):
+def logout_user(refresh_token: str, db: Session):
     try:
-        sessions = db.query(Sesion).filter(Sesion.usuario_id == current_user.id).all()
-        for session in sessions:
-            db.delete(session)
+        # Busca la sesión asociada al refresh token
+        session = db.query(Sesion).filter(Sesion.token == refresh_token).first()
+        
+        if session is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
+        
+        # Elimina solo la sesión actual
+        db.delete(session)
         db.commit()
-        return {"message": "Successfully logged out"}
+        return {"message": "Successfully logged out from this device"}
+    
     except Exception as e:
         db.rollback()
-        logger.error(f"Error during logout for user {current_user.id}: {str(e)}")
-        raise
+        logger.error(f"Error during logout for refresh token {refresh_token}: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"An error occurred during logout: {str(e)}")
+
 
 
 
@@ -61,21 +68,30 @@ def create_password_reset_token(db: Session, user_id: int):
     token = f"{user_id}_{secrets.token_urlsafe(32)}"
     expiration = datetime.utcnow() + timedelta(hours=1)
 
-    # Actualizar el usuario en la base de datos
-    user = db.query(User).filter(User.id == user_id).first()
+   
+    user = db.query(Usuario).filter(Usuario.id == user_id).first()  
     if user:
         user.reset_token = token
         user.reset_token_expiry = expiration
         db.commit()
         return token
+    
+    
     return None
 
 def verify_reset_token(db: Session, token: str):
     try:
-        user_id = int(token.split('_')[0])
-        user = db.query(User).filter(User.id == user_id).first()
-        if user and user.reset_token == token and user.reset_token_expiry > datetime.utcnow():
-            return user
+        
+        user_id = int(token.split('_')[0]) 
+        
+       
+        user = db.query(Usuario).filter(Usuario.id == user_id).first()
+        if user:
+            
+            if user.reset_token == token and user.reset_token_expiry > datetime.utcnow():
+                return user  
     except (ValueError, IndexError):
+        
         pass
+    
     return None
