@@ -30,6 +30,6 @@ def get_current_user(token: str, db: Session = Depends(get_db)):
         raise credentials_exception
 
     user = crud_user.get_user(db, user_id=int(user_id))
-    if user is None or user.rol_id != 1:  # Verificar rol_id
+    if user is None:
         raise credentials_exception
     return user

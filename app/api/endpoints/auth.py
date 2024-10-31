@@ -43,7 +43,7 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     BLOCKED_STATE_IDS = [3]
 
     if user.estado_id in BLOCKED_STATE_IDS:
-        logger.warning(f"Blocked user attempted to login: {user.id}")
+        logger.warning(f"Blocked user attempted to login: {user.id}") ## no olvidar preguntar al ingeniero sobre a que estados se le permite iniciar sesion
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="User account is blocked",
@@ -162,7 +162,7 @@ def forgot_password(request: PasswordResetRequest, db: Session = Depends(get_db)
     send_email(
         to_email=user.email,
         subject="Restablecimiento de Contraseña",
-        body=f"haz click n el enlace para reestablecer: {reset_link}"
+        body=f"haz click en el enlace para reestablecer: {reset_link}"
     )
 
     return {"message": "se envio conexito el correo"}
