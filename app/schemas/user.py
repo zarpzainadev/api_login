@@ -1,34 +1,37 @@
-from pydantic import BaseModel, EmailStr
+from enum import Enum
+from pydantic import BaseModel, EmailStr, validator
 from datetime import date, datetime
 from typing import Optional
 
-# Esquema base de usuario
-class UserBase(BaseModel):
-    dni: str
-    email: EmailStr
-    nombres: str
-    apellidos_paterno: str
-    apellidos_materno: str
-    fecha_nacimiento: date
-    celular: str
-    rol_id: int 
-    estado_id: int
-    
 
-class UserCreate(UserBase):
+#Esquemas para iniciar sesion (validaciones)
+class GrupoTipo(str, Enum):
+    Simbolica = 'Simbolica'
+    Regular = 'Regular'
+
+class LoginRequest(BaseModel):
+    grupo: GrupoTipo
+    numero: str
+    username: str  # Puede ser email o DNI
     password: str
 
-class UserInDB(UserBase):
-    id: int
-    password_hash: str
-    fecha_registro: datetime
+    @validator('username')
+    def validate_username(cls, v):
+        # Validar si es un DNI válido (8 dígitos) o un email
+        if v.isdigit() and len(v) == 8:
+            return v
+        elif '@' in v:
+            return v
+        raise ValueError('El username debe ser un DNI válido (8 dígitos) o un correo electrónico')
 
-    class Config:
-        orm_mode = True
+class Token(BaseModel):
+    access_token: str
+    refresh_token: str
+    token_type: str
 
-class UserLogin(BaseModel):
-    login: str  
-    password: str
+class MessageResponse(BaseModel):
+    detail: str
+
 
 class Token(BaseModel):
     access_token: str
@@ -39,8 +42,6 @@ class Token_regenerate(BaseModel):
     access_token: str
     token_type: str
 
-class TokenData(BaseModel):
-    user_id: Optional[int] = None
 
 # Esquema para crear una nueva sesión
 class SessionCreate(BaseModel):
@@ -67,3 +68,4 @@ class PasswordResetRequest(BaseModel):
 class PasswordResetConfirm(BaseModel):
     token: str
     new_password: str
+

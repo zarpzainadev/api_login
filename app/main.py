@@ -6,6 +6,7 @@ from fastapi.security import HTTPBearer
 from app.api.endpoints import auth
 from app.database import engine
 from sqlalchemy import text
+from fastapi.middleware.cors import CORSMiddleware
 
 security = HTTPBearer()
 
@@ -34,5 +35,15 @@ def verify_database_connection():
 @app.on_event("startup")
 async def startup_event():
     verify_database_connection()
+
+
+# Configuración de CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], 
+    allow_credentials=True,
+    allow_methods=["*"], 
+    allow_headers=["*"],  
+)
 
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
