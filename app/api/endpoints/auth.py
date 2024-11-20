@@ -1,17 +1,17 @@
 import logging
 from fastapi import APIRouter, Depends, HTTPException, logger, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer, OAuth2PasswordRequestForm
+from fastapi.security import  HTTPBearer
 from sqlalchemy.orm import Session
 from app.api.dependencies import get_current_user
 from app.api.email import send_email
 from ...crud import crud_user
-from ...schemas.user import LoginRequest, PasswordResetConfirm, PasswordResetRequest, RefreshTokenRequest, Token_regenerate,Token, Session
-from ...core.security import create_access_token, create_password_reset_token, get_password_hash, logout_user, verify_password, create_refresh_token, verify_reset_token
+from ...schemas.user import LoginRequest, PasswordResetConfirm, PasswordResetRequest, RefreshTokenRequest, ScreenGroupResponse, Token_regenerate,Token, Session, UsuarioScreenGroupsResponse
+from ...core.security import create_access_token, create_password_reset_token, get_password_hash, verify_password, create_refresh_token, verify_reset_token
 from ...database import get_db
-from ...models.user import EstadoUsuario
 from ...models.user import Sesion
 from datetime import datetime, timedelta
 from ...config import settings
+from sqlalchemy.exc import NoResultFound
 
 router = APIRouter()
 logging.basicConfig(level=logging.DEBUG)
@@ -215,4 +215,21 @@ def logout(
     return {"message": "Logout successful"}
  
 
- 
+@router.get("/screen-group", response_model=UsuarioScreenGroupsResponse)
+def get_screen_group_for_current_user(
+    db: Session = Depends(get_db),
+    token: str = Depends(security)
+):
+    try:
+        # Obtener al usuario actual a partir del token
+        current_user = get_current_user(token.credentials, db)
+
+        # Obtener los grupos de pantallas asociados al usuario actual
+        screen_groups = crud_user.get_screen_group_by_user_id(db=db, user_id=current_user.id)
+
+        return {"user_id": current_user.id, "screen_groups": screen_groups}
+
+    except NoResultFound as e:
+        raise HTTPException(status_code=404, detail="No se encontraron grupos de pantallas para el usuario.")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

@@ -94,4 +94,18 @@ class EstadoCuentaUsuario(Base):
     fecha_bloqueo = Column(DateTime, nullable=True)
     intentos_fallidos = Column(Integer, default=0)
 
-    
+class ScreenGroup(Base):
+    __tablename__ = 'screen_groups'
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), nullable=False)
+    identifier = Column(String(50), unique=True, nullable=False)
+    description = Column(Text, nullable=True)
+
+
+class RoleScreenGroup(Base):
+    __tablename__ = 'role_screen_group'
+
+    role_id = Column(Integer, ForeignKey('roles.id'), primary_key=True)
+    screen_group_id = Column(Integer, ForeignKey('screen_groups.id'), primary_key=True)
+

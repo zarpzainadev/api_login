@@ -1,9 +1,10 @@
 from fastapi import HTTPException
 from sqlalchemy import and_, or_, select
 from sqlalchemy.orm import Session
-from app.models.user import EstadoCuentaUsuario, Organizacion, Sesion, Usuario, UsuarioOrganizacion
+from app.models.user import EstadoCuentaUsuario, Organizacion, RoleScreenGroup, ScreenGroup, Sesion, Usuario, UsuarioOrganizacion
 from app.core.security import get_password_hash
 from datetime import datetime, timedelta
+from sqlalchemy.exc import NoResultFound
 
 #funciona para verificar organizacion
 def get_organization_by_grupo_numero(db: Session, grupo: str, numero: str):
@@ -79,3 +80,25 @@ def get_user(db: Session, user_id: int):
 
 def get_user_by_email(db: Session, email: str):
     return db.query(Usuario).filter(Usuario.email == email).first()
+
+
+#fucncion para obtener el identicador de pantalla
+def get_screen_group_by_user_id(db: Session, user_id: int):
+    # Buscar el usuario por su ID
+    usuario = db.query(Usuario).filter(Usuario.id == user_id).first()
+    
+    if usuario is None:
+        raise NoResultFound("Usuario no encontrado")
+
+    # Obtener el role_id del usuario
+    role_id = usuario.rol_id
+
+    # Buscar los ScreenGroups asociados a ese role_id
+    screen_group = db.query(ScreenGroup).join(
+        RoleScreenGroup, RoleScreenGroup.screen_group_id == ScreenGroup.id
+    ).filter(RoleScreenGroup.role_id == role_id).all()
+
+    if screen_group is None:
+        raise NoResultFound("No se encontraron grupos de pantalla para este rol")
+
+    return screen_group

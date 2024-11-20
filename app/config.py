@@ -2,7 +2,7 @@ import secrets
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
-    DATABASE_URL: str = "postgresql://postgres:jesus@localhost/gestiondb"
+    DATABASE_URL: str = "postgresql://root:04v4BHrrMFIH5s55WPuNFMMejtrf20kh@dpg-csscd9i3esus739kvr3g-a.oregon-postgres.render.com/database_yao3"
     SECRET_KEY: str = "pyua0h61iHL2-eNV4sZH1-rxa55ZIGpFstu0lSPWX8k"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60

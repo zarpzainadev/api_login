@@ -1,7 +1,7 @@
 from enum import Enum
 from pydantic import BaseModel, EmailStr, validator
 from datetime import date, datetime
-from typing import Optional
+from typing import List, Optional
 
 
 #Esquemas para iniciar sesion (validaciones)
@@ -68,4 +68,21 @@ class PasswordResetRequest(BaseModel):
 class PasswordResetConfirm(BaseModel):
     token: str
     new_password: str
+
+#schema de respuesta para identifcador de pantalla
+class ScreenGroupResponse(BaseModel):
+    id: int
+    name: str
+    identifier: str
+
+    class Config:
+        orm_mode = True
+
+class UsuarioScreenGroupsResponse(BaseModel):
+    user_id: int
+    screen_groups: List[ScreenGroupResponse]
+
+    class Config:
+        orm_mode = True
+
 
