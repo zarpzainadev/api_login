@@ -8,7 +8,7 @@ from ...crud import crud_user
 from ...schemas.user import LoginRequest, PasswordResetConfirm, PasswordResetRequest, RefreshTokenRequest, ScreenGroupResponse, Token_regenerate,Token, Session, UsuarioScreenGroupsResponse
 from ...core.security import create_access_token, create_password_reset_token, get_password_hash, verify_password, create_refresh_token, verify_reset_token
 from ...database import get_db
-from ...models.user import Sesion
+from ...models.user import Sesion, Usuario
 from datetime import datetime, timedelta
 from ...config import settings
 from sqlalchemy.exc import NoResultFound
@@ -88,8 +88,8 @@ def login(login_data: LoginRequest, db: Session = Depends(get_db)):
     refresh_token_expires = timedelta(minutes=settings.REFRESH_TOKEN_EXPIRE_MINUTES)
 
     access_token = create_access_token(
-        data={"sub": str(user.id)}, expires_delta=access_token_expires
-    )
+    data={"sub": str(user.id), "rol_id": user.rol_id}, expires_delta=access_token_expires
+)
     refresh_token = create_refresh_token(
         data={"sub": str(user.id)}, expires_delta=refresh_token_expires
     )
@@ -130,7 +130,6 @@ def refresh_token(refresh_request: RefreshTokenRequest, db: Session = Depends(ge
         logger.warning("Invalid refresh token attempt")
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
 
-   
     current_time = datetime.utcnow().replace(tzinfo=None)
     session_expiration = session.fecha_expiracion.replace(tzinfo=None)
 
@@ -140,9 +139,14 @@ def refresh_token(refresh_request: RefreshTokenRequest, db: Session = Depends(ge
         db.commit()
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Refresh token expired")
 
+    # Obtener el usuario para acceder al rol_id
+    user = db.query(Usuario).filter(Usuario.id == session.usuario_id).first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        data={"sub": str(session.usuario_id)}, expires_delta=access_token_expires  
+        data={"sub": str(session.usuario_id), "rol_id": user.rol_id}, expires_delta=access_token_expires  
     )
 
     logger.info(f"Token refreshed successfully for user: {session.usuario_id}")
