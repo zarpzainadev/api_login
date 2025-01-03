@@ -8,6 +8,7 @@ from typing import List, Optional
 class GrupoTipo(str, Enum):
     Simbolica = 'Simbolica'
     Regular = 'Regular'
+    Filosófica = 'Filosófica'
 
 class LoginRequest(BaseModel):
     grupo: GrupoTipo

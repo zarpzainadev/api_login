@@ -7,6 +7,7 @@ from sqlalchemy.orm import relationship
 class GrupoTipo(enum.Enum):
     Simbolica = 'Simbolica'
     Regular = 'Regular'
+    Filosófica = 'Filosófica'
 
 class EstadoTipo(enum.Enum):
     Activo = 'Activo'
