@@ -73,7 +73,13 @@ class Organizacion(Base):
     numero = Column(String(50), nullable=False)
     grupo = Column(Enum(GrupoTipo), nullable=False)
     estado = Column(Enum(EstadoTipo), nullable=False, default=EstadoTipo.Activo)
+    id_rito = Column(Integer, ForeignKey('rito.id'), nullable=True)
 
+class Rito(Base):
+    __tablename__ = 'rito'
+
+    id = Column(Integer, primary_key=True, index=True)
+    nombre = Column(String(255), nullable=False)
    
 
 class UsuarioOrganizacion(Base):
